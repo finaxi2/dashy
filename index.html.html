@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DASHY | Panel Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap" rel="stylesheet">
+</head>
+<body class="bg-[#121212] text-white font-sans min-h-screen p-6">
+
+    <header class="max-w-3xl mx-auto mb-10 flex justify-between items-center border-b border-white/10 pb-6">
+        <h1 class="text-3xl font-black italic tracking-tighter">DASHY ADMIN</h1>
+        <button onclick="loadCitas()" class="bg-white/5 hover:bg-white/10 text-[10px] px-4 py-2 rounded-full border border-white/10 transition-all uppercase tracking-widest">
+            Actualizar Lista
+        </button>
+    </header>
+
+    <main class="max-w-3xl mx-auto">
+        <div id="citas-list" class="space-y-4">
+            <p class="text-slate-500 animate-pulse text-center">Iniciando sistema...</p>
+        </div>
+    </main>
+
+    <script>
+        // 1. Declaramos la variable afuera pero sin asignar
+        let _supabase;
+
+        // 2. Función para inicializar Supabase ANTES de cargar nada
+        function conectarBaseDeDatos() {
+            const URL = "https://geagsefrvfwcwsvbtilz.supabase.co";
+            const KEY = "sb_publishable_ENY2j0XQ1mIw1ykMbZde2Q_UXOxQfI6";
+            _supabase = supabase.createClient(URL, KEY);
+            console.log("Conexión inicializada.");
+        }
+
+        async function loadCitas() {
+            const list = document.getElementById('citas-list');
+            
+            // Si por alguna razón no está inicializado, lo hacemos ahora
+            if (!_supabase) conectarBaseDeDatos();
+
+            try {
+                const { data, error } = await _supabase
+                    .from('citas')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    list.innerHTML = `<div class="text-red-500 p-4 border border-red-500/20 rounded-xl">Error: ${error.message}</div>`;
+                    return;
+                }
+
+                if (!data || data.length === 0) {
+                    list.innerHTML = `<p class="text-center text-slate-600 border-2 border-dashed border-white/5 p-10 rounded-3xl">No hay citas registradas.</p>`;
+                    return;
+                }
+
+                list.innerHTML = '';
+                data.forEach(c => {
+                    list.innerHTML += `
+                        <div class="bg-[#1E1E1E] border border-white/5 p-6 rounded-2xl flex justify-between items-center group">
+                            <div>
+                                <h3 class="font-black text-xl italic uppercase mb-1">${c.cliente_nombre}</h3>
+                                <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-3">Barbero: ${c.barbero_nombre}</p>
+                                <div class="flex gap-4 text-xs font-medium text-slate-400">
+                                    <span>📅 ${c.fecha}</span>
+                                    <span>⏰ ${c.hora}hs</span>
+                                    <span class="text-green-500">📞 ${c.cliente_telefono}</span>
+                                </div>
+                            </div>
+                            <button onclick="borrarCita(${c.id})" class="text-red-500 p-3 hover:bg-red-500/10 rounded-xl transition-all">Eliminar</button>
+                        </div>`;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function borrarCita(id) {
+            if (confirm('¿Eliminar cita?')) {
+                await _supabase.from('citas').delete().eq('id', id);
+                loadCitas();
+            }
+        }
+
+        // 3. EVENTO CLAVE: Solo arranca cuando el DOM (HTML) está 100% cargado
+        document.addEventListener('DOMContentLoaded', () => {
+            conectarBaseDeDatos();
+            loadCitas();
+        });
+    </script>
+</body>
+</html>
